@@ -27,6 +27,7 @@ from torch.autograd import Variable
 from util import ImageProcessing
 from skimage.metrics import structural_similarity as ssim
 import logging
+import pdb
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -75,13 +76,28 @@ class Evaluator():
         net.eval()
         net.cuda()
 
+        progress_count = 0
         with torch.no_grad():
-            for batch_num, data in enumerate(self.data_loader, 0):
+            # for batch_num, data in enumerate(self.data_loader, 0):
+            for input_tensor, gt_tensor, name in self.data_loader:
+                print("progress: ", progress_count, " ...")
+                progress_count += 1
 
-                input_img_batch, output_img_batch, name = Variable(data['input_img'], requires_grad=False).cuda(), Variable(data['output_img'],
-                                                                                                   requires_grad=False).cuda(), \
-                    data['name']
+                batch_num = input_tensor.size(0)
+
+                # input_img_batch, output_img_batch, name = Variable(data['input_img'], requires_grad=False).cuda(), Variable(data['output_img'],
+                #   requires_grad=False).cuda(), data['name']
+                # input_tensor.size() -- [1, 3, 341, 512], 
+                # input_tensor.min(), input_tensor.max() -- 0.0275, 0.882
+                                                                  
+                input_img_batch = input_tensor.cuda()
+                output_img_batch = gt_tensor.cuda()
+
+
                 input_img_batch = input_img_batch.unsqueeze(0)
+
+                print(name)
+
 
                 for i in range(0, input_img_batch.shape[0]):
 

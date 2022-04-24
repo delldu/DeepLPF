@@ -34,7 +34,7 @@ from torch.autograd import Variable
 import torchvision.transforms as transforms
 import torch
 import time
-from data import Adobe5kDataLoader, Dataset
+from data import Adobe5kDataLoader, Dataset, get_test_data_loader
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib
 import numpy as np
@@ -44,14 +44,16 @@ matplotlib.use('agg')
 
 def main():
 
-    print("*** Before running this code ensure you keep the default batch size of 1. The code has not been engineered to support higher batch sizes. See README for more detail. Remove the exit() statement to use code. ***")
-    exit()
+    # print("*** Before running this code ensure you keep the default batch size of 1. The code has not been engineered to support higher batch sizes. See README for more detail. Remove the exit() statement to use code. ***")
+    # exit()
 
     writer = SummaryWriter()
 
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
     log_dirpath = "./log_" + timestamp
-    os.mkdir(log_dirpath)
+    if not os.path.exists(log_dirpath):
+        os.mkdir(log_dirpath)
+    # log_dirpath -- './log_2022-04-16'
 
     handlers = [logging.FileHandler(
         log_dirpath + "/deep_lpf.log"), logging.StreamHandler()]
@@ -71,18 +73,18 @@ def main():
     parser.add_argument(
         "--inference_img_dirpath", required=False,
         help="Directory containing images to run through a saved DeepLPF model instance", default=None)
-    parser.add_argument(
-        "--training_img_dirpath", required=True,
-        help="Directory containing images to train a DeepLPF model instance", default="/home/sjm213/adobe5k/adobe5k/")
+    # parser.add_argument(
+    #     "--training_img_dirpath", required=True,
+    #     help="Directory containing images to train a DeepLPF model instance", default="/home/sjm213/adobe5k/adobe5k/")
     parser.add_argument(
         "--inference_img_list_path", required=False,
         help="Plain text file containing the names of the images to inference")
-    parser.add_argument(
-        "--train_img_list_path", required=True,
-        help="Plain text file containing the names of the training images")
-    parser.add_argument(
-        "--valid_img_list_path", required=True,
-        help="Plain text file containing the names of the validation images")
+    # parser.add_argument(
+    #     "--train_img_list_path", required=True,
+    #     help="Plain text file containing the names of the training images")
+    # parser.add_argument(
+    #     "--valid_img_list_path", required=True,
+    #     help="Plain text file containing the names of the validation images")
     parser.add_argument(
         "--test_img_list_path", required=False,
         help="Plain text file containing the names of the test images")
@@ -92,21 +94,21 @@ def main():
     valid_every = args.valid_every
     checkpoint_filepath = args.checkpoint_filepath
     inference_img_dirpath = args.inference_img_dirpath
-    training_img_dirpath = args.training_img_dirpath
+    # training_img_dirpath = args.training_img_dirpath
     inference_img_list_path = args.inference_img_list_path
     test_img_list_path = args.test_img_list_path
-    valid_img_list_path = args.valid_img_list_path
-    train_img_list_path = args.train_img_list_path
+    # valid_img_list_path = args.valid_img_list_path
+    # train_img_list_path = args.train_img_list_path
 
     logging.info('######### Parameters #########')
     logging.info('Number of epochs: ' + str(num_epoch))
     logging.info('Logging directory: ' + str(log_dirpath))
     logging.info('Dump validation accuracy every: ' + str(valid_every))
-    logging.info('Training image directory: ' + str(training_img_dirpath))
+    # logging.info('Training image directory: ' + str(training_img_dirpath))
     logging.info('List of images to inference: ' + str(inference_img_list_path))
     logging.info('List of test images: ' + str(test_img_list_path))
-    logging.info('List of validation images: ' + str(valid_img_list_path))
-    logging.info('List of training images: ' + str(train_img_list_path))
+    # logging.info('List of validation images: ' + str(valid_img_list_path))
+    # logging.info('List of training images: ' + str(train_img_list_path))
 
     logging.info('##############################')
 
@@ -123,16 +125,20 @@ def main():
                                 a1242.tif
                                 etc
         '''
-        inference_data_loader = Adobe5kDataLoader(data_dirpath=inference_img_dirpath,
-                                                  img_ids_filepath=inference_img_list_path)
-        inference_data_dict = inference_data_loader.load_data()
-        inference_dataset = Dataset(data_dict=inference_data_dict,
-                                    transform=transforms.Compose([transforms.ToTensor()]), normaliser=1,
-                                    is_inference=True)
-
         assert(BATCH_SIZE==1)
-        inference_data_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=BATCH_SIZE, shuffle=False,
-                                                            num_workers=6)
+
+        # inference_data_loader = Adobe5kDataLoader(data_dirpath=inference_img_dirpath,
+        #                                           img_ids_filepath=inference_img_dirpath+"/../images_inference.txt")
+        # inference_data_dict = inference_data_loader.load_data()
+        # inference_dataset = Dataset(data_dict=inference_data_dict,
+        #                             transform=transforms.Compose([transforms.ToTensor()]), normaliser=1,
+        #                             is_inference=True)
+
+        # inference_data_loader = torch.utils.data.DataLoader(inference_dataset, batch_size=BATCH_SIZE, shuffle=False,
+        #                                                     num_workers=10)
+
+        inference_data_loader = get_test_data_loader()
+
 
         '''
         Performs inference on all the images in inference_img_dirpath

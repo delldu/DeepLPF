@@ -6,7 +6,8 @@
 #This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the BSD 0-Clause License for more details.
 '''
 This is a PyTorch implementation of the CVPR 2020 paper:
-"Deep Local Parametric Filters for Image Enhancement": https://arxiv.org/abs/2003.13985
+"Deep Local Parametric Filters for Image Enhancement": https://arxiv.org/abs/2003.139
+85
 
 Please cite the paper if you use this code
 
@@ -24,10 +25,10 @@ from math import exp
 import math
 import torch.nn.functional as F
 from util import ImageProcessing
-from torch.autograd import Variable
 
 matplotlib.use('agg')
 
+import pdb
 
 class DeepLPFLoss(nn.Module):
 
@@ -57,8 +58,7 @@ class DeepLPFLoss(nn.Module):
         _1D_window = self.gaussian(window_size, 1.5).unsqueeze(1)
         _2D_window = _1D_window.mm(
             _1D_window.t()).float().unsqueeze(0).unsqueeze(0)
-        window = Variable(_2D_window.expand(
-            num_channel, 1, window_size, window_size).contiguous())
+        window = _2D_window.expand(num_channel, 1, window_size, window_size).contiguous()
         return window
 
     def gaussian(self, window_size, sigma):
@@ -132,6 +132,7 @@ class DeepLPFLoss(nn.Module):
         :rtype: float
 
         """
+
         if img1.shape[2]!=img2.shape[2]:
                 img1=img1.transpose(2,3)
 
@@ -187,10 +188,8 @@ class DeepLPFLoss(nn.Module):
         num_images = target_img_batch.shape[0]
         target_img_batch = target_img_batch
 
-        ssim_loss_value = Variable(
-            torch.cuda.FloatTensor(torch.zeros(1, 1).cuda()))
-        l1_loss_value = Variable(
-            torch.cuda.FloatTensor(torch.zeros(1, 1).cuda()))
+        ssim_loss_value = torch.cuda.FloatTensor(torch.zeros(1, 1).cuda())
+        l1_loss_value = torch.cuda.FloatTensor(torch.zeros(1, 1).cuda())
 
         for i in range(0, num_images):
 
@@ -299,10 +298,10 @@ class CubicFilter(nn.Module):
 
         cubic_mask = torch.zeros_like(img)
 
-        x_axis = Variable(torch.arange(
-            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda()) / img.shape[2]
-        y_axis = Variable(torch.arange(img.shape[3]).repeat(
-            img.shape[2], 1).cuda()) / img.shape[3]
+        x_axis = torch.arange(
+            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda() / img.shape[2]
+        y_axis = torch.arange(img.shape[3]).repeat(
+            img.shape[2], 1).cuda() / img.shape[3]
 
         '''
         Cubic for R channel
@@ -417,9 +416,12 @@ class GraduatedFilter(nn.Module):
         :rtype: Tensor
 
         """
-        if (invert == 1).all():
+        # print("get_inverted_mask invert: ", invert)
 
-            if (factor >= 1).all():
+        # if (invert == 1).all():
+        if torch.abs(invert - 1.0).mean() < 0.01:
+            # if (factor >= 1).all():
+            if factor.min() >= 1.0:
                 diff = ((factor-1))/2 + 1
                 grad1 = (diff-factor)/d1
                 grad2 = (1-diff)/d2
@@ -432,8 +434,8 @@ class GraduatedFilter(nn.Module):
                 mask_scale = torch.clamp(
                     factor+grad1*top_line+grad2*top_line, min=0, max=1)
         else:
-
-            if (factor >= 1).all():
+            # if (factor >= 1).all():
+            if factor.min() >= 1.0:
                 diff = ((factor-1))/2 + 1
                 grad1 = (diff-factor)/d1
                 grad2 = (factor-diff)/d2
@@ -462,10 +464,10 @@ class GraduatedFilter(nn.Module):
         ####################### Graduated #####################
         eps = 1e-10
 
-        x_axis = Variable(torch.arange(
-            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda()) / img.shape[2]
-        y_axis = Variable(torch.arange(img.shape[3]).repeat(
-            img.shape[2], 1).cuda()) / img.shape[3]
+        x_axis = torch.arange(
+            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda() / img.shape[2]
+        y_axis = torch.arange(img.shape[3]).repeat(
+            img.shape[2], 1).cuda() / img.shape[3]
 
         feat_graduated = torch.cat((feat, img), 1)
         feat_graduated = self.upsample(feat_graduated)
@@ -688,10 +690,10 @@ class EllipticalFilter(nn.Module):
         # https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
         
         # Normalised coordinates for x and y-axes, we instantiate the ellipses in these coordinates
-        x_axis = Variable(torch.arange(
-            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda()) / img.shape[2]
-        y_axis = Variable(torch.arange(img.shape[3]).repeat(
-            img.shape[2], 1).cuda()) / img.shape[3]
+        x_axis = torch.arange(
+            img.shape[2]).view(-1, 1).repeat(1, img.shape[3]).cuda() / img.shape[2]
+        y_axis = torch.arange(img.shape[3]).repeat(
+            img.shape[2], 1).cuda() / img.shape[3]
 
         # x coordinate - h position
         right_x = (img.shape[2] - 1) / img.shape[2]
@@ -818,32 +820,32 @@ class EllipticalFilter(nn.Module):
         return mask_scale_elliptical
 
 
-class Block(nn.Module):
+# class Block(nn.Module):
 
-    def __init__(self):
-        """Initialisation for a lower-level DeepLPF conv block
+#     def __init__(self):
+#         """Initialisation for a lower-level DeepLPF conv block
 
-        :returns: N/A
-        :rtype: N/A
+#         :returns: N/A
+#         :rtype: N/A
 
-        """
-        super(Block, self).__init__()
+#         """
+#         super(Block, self).__init__()
 
-    def conv3x3(self, in_channels, out_channels, stride=1):
-        """Represents a convolution of shape 3x3
+#     def conv3x3(self, in_channels, out_channels, stride=1):
+#         """Represents a convolution of shape 3x3
 
-        :param in_channels: number of input channels
-        :param out_channels: number of output channels
-        :param stride: the convolution stride
-        :returns: convolution function with the specified parameterisation
-        :rtype: function
+#         :param in_channels: number of input channels
+#         :param out_channels: number of output channels
+#         :param stride: the convolution stride
+#         :returns: convolution function with the specified parameterisation
+#         :rtype: function
 
-        """
-        return nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                         stride=stride, padding=1, bias=True)
+#         """
+#         return nn.Conv2d(in_channels, out_channels, kernel_size=3,
+#                          stride=stride, padding=1, bias=True)
 
 
-class ConvBlock(Block, nn.Module):
+class ConvBlock(nn.Module):
 
     def __init__(self, num_in_channels, num_out_channels, stride=1):
         """Initialise function for the higher level convolution block
@@ -856,8 +858,10 @@ class ConvBlock(Block, nn.Module):
         :rtype:
 
         """
-        super(Block, self).__init__()
-        self.conv = self.conv3x3(num_in_channels, num_out_channels, stride=2)
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv2d(num_in_channels, num_out_channels, kernel_size=3, 
+                         stride=2, padding=1, bias=True)
+        # self.conv = self.conv3x3(num_in_channels, num_out_channels, stride=2)
         self.lrelu = nn.LeakyReLU()
 
     def forward(self, x):
@@ -872,7 +876,7 @@ class ConvBlock(Block, nn.Module):
         return img_out
 
 
-class MaxPoolBlock(Block, nn.Module):
+class MaxPoolBlock(nn.Module):
 
     def __init__(self):
         """Initialise function for the max pooling block
@@ -881,7 +885,7 @@ class MaxPoolBlock(Block, nn.Module):
         :rtype: N/A
 
         """
-        super(Block, self).__init__()
+        super(MaxPoolBlock, self).__init__()
 
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -897,7 +901,7 @@ class MaxPoolBlock(Block, nn.Module):
         return img_out
 
 
-class GlobalPoolingBlock(Block, nn.Module):
+class GlobalPoolingBlock(nn.Module):
 
     def __init__(self, receptive_field):
         """Implementation of the global pooling block. Takes the average over a 2D receptive field.
@@ -906,7 +910,7 @@ class GlobalPoolingBlock(Block, nn.Module):
         :rtype: N/A
 
         """
-        super(Block, self).__init__()
+        super(GlobalPoolingBlock, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
@@ -922,8 +926,6 @@ class GlobalPoolingBlock(Block, nn.Module):
 
 
 class DeepLPFParameterPrediction(nn.Module):
-    import torch.nn.functional as F
-
     def __init__(self, num_in_channels=64, num_out_channels=64, batch_size=1):
         """Initialisation function
 
@@ -951,13 +953,13 @@ class DeepLPFParameterPrediction(nn.Module):
 
         """
         x.contiguous()  # remove memory holes
-        x.cuda()
+        # x.cuda()
 
         feat = x[:, 3:64, :, :]
         img = x[:, 0:3, :, :]
 
-        torch.cuda.empty_cache()
-        shape = x.shape
+        # torch.cuda.empty_cache()
+        # shape = x.shape
 
         img_cubic = self.cubic_filter.get_cubic_mask(feat, img)
        
@@ -969,8 +971,10 @@ class DeepLPFParameterPrediction(nn.Module):
         mask_scale_fuse = torch.clamp(
             mask_scale_graduated+mask_scale_elliptical, 0, 2)
 
-        img_fuse = torch.clamp(img_cubic*mask_scale_fuse, 0, 1)
-        
+        # img_fuse = torch.clamp(img_cubic*mask_scale_fuse, 0, 1)
+        img_cubic *= mask_scale_fuse
+        img_fuse = torch.clamp(img_cubic, 0.0, 1.0)
+                
         img = torch.clamp(img_fuse+img, 0, 1)
         
         return img

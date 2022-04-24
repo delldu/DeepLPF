@@ -31,6 +31,71 @@ from abc import abstractmethod
 matplotlib.use('agg')
 np.set_printoptions(threshold=sys.maxsize)
 
+import glob
+import torch.utils.data as data
+import torchvision.transforms as T
+from PIL import Image
+import pdb
+
+def get_transform(train=True):
+    """Transform images."""
+    ts = []
+    # if train:
+    #     ts.append(T.RandomHorizontalFlip(0.5))
+
+    ts.append(T.ToTensor())
+    return T.Compose(ts)
+
+
+class DeepLPFExampleTestDataset(data.Dataset):
+    """Define dataset."""
+
+    def __init__(self, root, transforms=get_transform()):
+        """Init dataset."""
+        super(DeepLPFExampleTestDataset, self).__init__()
+
+        self.root = root
+        self.transforms = transforms
+
+        self.gt_files = sorted(glob.glob(root + "/deeplpf_example_test_inference/*.jpg"))
+        self.input_files = sorted(glob.glob(root + "/deeplpf_example_test_input/*.png"))
+
+    def __getitem__(self, idx):
+        """Load images."""
+        input_image = Image.open(self.input_files[idx]).convert("RGB")
+        gt_image = Image.open(self.gt_files[idx]).convert("RGB")
+        input_image = input_image.resize((gt_image.width, gt_image.height))
+
+        if self.transforms is not None:
+            input_image = self.transforms(input_image)
+            gt_image = self.transforms(gt_image)
+
+        return input_image, gt_image, os.path.basename(self.input_files[idx])
+
+    def __len__(self):
+        """Return total numbers of images."""
+        return len(self.input_files)
+
+    def __repr__(self):
+        """
+        Return printable representation of the dataset object.
+        """
+        fmt_str = "Dataset " + self.__class__.__name__ + "\n"
+        fmt_str += "    Number of samples: {}\n".format(self.__len__())
+        fmt_str += "    Root Location: {}\n".format(self.root)
+        tmp = "    Transforms: "
+        fmt_str += "{0}{1}\n".format(
+            tmp, self.transforms.__repr__().replace("\n", "\n" + " " * len(tmp))
+        )
+        return fmt_str
+
+def get_test_data_loader():
+    ds = DeepLPFExampleTestDataset('adobe5k_dpe', get_transform(train=True))
+    print(ds)
+
+    return data.DataLoader(ds, batch_size=1, shuffle=False, num_workers=1)
+
+
 
 class Dataset(torch.utils.data.Dataset):
 
